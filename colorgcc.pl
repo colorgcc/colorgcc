@@ -172,6 +172,78 @@ sub srcscan
    print($line, color("reset"));
 }
 
+sub getWarningTag
+{
+# Usage: getWarningTag()
+#
+# returns the string used by gcc for the word "warning" (in English)
+# based on the current language setting. It looks up a key=value pair
+# (lang=warning) in $DB_FILE. If found, it uses that value. If not
+# found, it will run a shell script runnning a test compile to determine
+# the value. If that succeeds, it will add the new key/value pair to
+# $DB_FILE.
+
+   my($lang) = $ENV{"LANG"};
+   # TODO: Need an absolute path here...
+   my($DB_FILE) = "warnings_db.txt";
+
+   # if lang is unset...
+   return "warning" if ($lang eq "");
+
+   $warningTag = "";
+
+   # Look for language key in file. It's ok if file doesn't exist.
+   if (open(my $in,  "<",  $DB_FILE))
+   {
+       while(<$in>)
+       {
+	   if (m/^$lang=(.+)$/) # language=warning_tag
+	   {
+	       $warningTag = $1 || "";
+	       last;
+	   }
+       }
+       close $in;
+   }
+
+   # Was the key/value pair NOT found?
+   if ($warningTag eq "")
+   {
+       # Compute the tag. For now, we'll use a shell script to do this
+       # since I don't know perl. Perhaps someone would clean up this
+       # function and incorporate the shell script's functionality into
+       # this file.
+       # TODO: this may not be very portable.
+       if (open($in, ". colorgcc_warning_test.sh|"))
+       {
+	   chomp($warningTag=<$in>);
+	   close $in;
+       }
+
+       # Do we have a valid key/value pair now?
+       if ($warningTag ne "")
+       {
+	   # Save the new pair by appending it to the file.
+	   if (open($in, ">>", $DB_FILE))
+	   {
+	       print $in "$lang=$warningTag\n";
+	       close $in;
+	   }
+       }
+   }
+
+   # Still unknown?
+   if ($warningTag eq "")
+   {
+       print "Failed to discover the \"warning\" tag for \"LANG=$lang\"\n";
+       print "You may add it manually to $DB_FILE like this:\n";
+       print "$lang=your_gcc_warning_value\n";
+       exit 0;
+   }
+
+   return $warningTag;
+}
+
 #
 # Main program
 #
@@ -203,6 +275,10 @@ if (! -t STDOUT || $nocolor{$terminal})
       or die("Couldn't exec");
 }
 
+# Lookup the word used in this locale for "warning". If unknown,
+# we'll compile a quick test to determine it and then save the result.
+$WARNING = getWarningTag();
+
 # Keep the pid of the compiler process so we can get its return
 # code and use that as our return code.
 $compiler_pid = open3('<&STDIN', \*GCCOUT, '', $compiler, @ARGV);
@@ -216,7 +292,8 @@ while(<GCCOUT>)
       $field2 = $2 || "";
       $field3 = $3 || "";
 
-      if ($field3 =~ m/\s+warning:.*/)
+      if ($field3 =~ m/\s+$WARNING:.*/)
+#      if ($field3 =~ m/\s+warning:.*/)
       {
 	 # Warning
 	 print($colors{"warningFileNameColor"}, "$field1:", color("reset"));
@@ -247,6 +324,7 @@ while(<GCCOUT>)
 # Get the return code of the compiler and exit with that.
 waitpid($compiler_pid, 0);
 exit ($? >> 8);
+
 
 
 
