@@ -95,8 +95,11 @@ sub initDefaults
 {
    $compilerPaths{"gcc"} = "/usr/bin/gcc";
    $compilerPaths{"g++"} = "/usr/bin/g++";
-   $compilerPaths{"cc"}  = "/usr/bin/cc";
-   $compilerPaths{"c++"} = "/usr/bin/c++";
+   $compilerPaths{"cc"}  = "/usr/bin/gcc";
+   $compilerPaths{"c++"} = "/usr/bin/g++";
+   $compilerPaths{"g77"} = "/usr/bin/g77";
+   $compilerPaths{"f77"} = "/usr/bin/g77";
+   $compilerPaths{"gcj"} = "/usr/bin/gcj";
 
    $nocolor{"dumb"} = "true";
 
@@ -110,6 +113,9 @@ sub initDefaults
    $colors{"errorFileNameColor"} = color("bold red");
    $colors{"errorNumberColor"}   = color("bold red");
    $colors{"errorMessageColor"}  = color("bold red");
+
+   @{$translations{"warning"}} = ();
+   @{$translations{"error"}}   = ();
 }
 
 sub loadPreferences
@@ -120,6 +126,9 @@ sub loadPreferences
 
    open(PREFS, "<$filename") || return;
 
+   my $gccVersion;
+   my $overrideCompilerPaths = 0;
+
    while(<PREFS>)
    {
       next if (m/^\#.*/);          # It's a comment.
@@ -128,9 +137,14 @@ sub loadPreferences
       $option = $1;
       $value = $2;
 
-      if ($option =~ m/cc|c\+\+|gcc|g\+\+/)
+      if ($option =~ m/\A(cc|c\+\+|gcc|g\+\+|g77|f77|gcj)\Z/)
       {
 	 $compilerPaths{$option} = $value;
+	 $overrideCompilerPaths  = 1;
+      }
+      elsif ($option eq "gccVersion")
+      {
+         $gccVersion = $value;
       }
       elsif ($option eq "nocolor")
       {
@@ -141,12 +155,26 @@ sub loadPreferences
 	    $nocolor{$termtype} = "true";
 	 }
       }
-      else
+      elsif ($option =~ m/(.+)Translations/)
+      {
+         @{$translations{$1}} = split(/\s+/, $value);
+      }
+      elsif ($option =~ m/Color$/)
       {
 	 $colors{$option} = color($value);
       }
+      else
+      {
+         # treat unknown options as user defined compilers
+         $compilerPaths{$option} = $value;
+      }
    }
    close(PREFS);
+
+   # Append "-<gccVersion>" to user-defined compilerPaths
+   if ($overrideCompilerPaths && $gccVersion) {
+      $compilerPaths{$_} .= "-$gccVersion" foreach (keys %compilerPaths);
+   }
 }
 
 sub srcscan
@@ -167,7 +195,7 @@ sub srcscan
    # This substitute replaces `foo' with `AfooB' where A is the escape
    # sequence that turns on the the desired source color, and B is the
    # escape sequence that returns to $normalColor.
-   $line =~ s/\`(.*?)\'/\`$srcon$1$srcoff\'/g;
+   $line =~ s/(\`|\')(.*?)\'/\`$srcon$2$srcoff\'/g;
 
    print($line, color("reset"));
 }
@@ -181,9 +209,12 @@ initDefaults();
 
 # Read the configuration file, if there is one.
 $configFile = $ENV{"HOME"} . "/.colorgccrc";
+$default_configFile = "/etc/colorgcc/colorgccrc";
 if (-f $configFile)
 {
    loadPreferences($configFile);
+} elsif (-f $default_configFile ) {
+   loadPreferences($default_configFile)
 }
 
 # Figure out which compiler to invoke based on our program name.
@@ -191,44 +222,121 @@ $0 =~ m%.*/(.*)$%;
 $progName = $1 || $0;
 
 $compiler = $compilerPaths{$progName} || $compilerPaths{"gcc"};
+@comp_list = split /\s+/, $compiler;
+$compiler = $comp_list[0];
+@comp_args = ( @comp_list[1 .. $#comp_list], @ARGV );
+
+# Check that we don't reference self
+die "$compiler is self-referencing"
+   if ( -l $compiler and (stat $compiler)[1] == (stat $0)[1] );
 
 # Get the terminal type. 
 $terminal = $ENV{"TERM"} || "dumb";
 
 # If it's in the list of terminal types not to color, or if
 # we're writing to something that's not a tty, don't do color.
-if (! -t STDOUT || $nocolor{$terminal})
+if (! $ENV{"CGCC_FORCE_COLOR"} && (! -t STDOUT || $nocolor{$terminal}))
 {
-   exec $compiler, @ARGV
+   exec $compiler, @comp_args
       or die("Couldn't exec");
 }
 
 # Keep the pid of the compiler process so we can get its return
 # code and use that as our return code.
-$compiler_pid = open3('<&STDIN', \*GCCOUT, '', $compiler, @ARGV);
+$compiler_pid = open3('<&STDIN', \*GCCOUT, \*GCCOUT, $compiler, @comp_args);
+binmode(\*GCCOUT,":bytes");
+binmode(\*STDOUT,":bytes");
 
 # Colorize the output from the compiler.
 while(<GCCOUT>)
 {
-   if (m/^(.*?):([0-9]+):(.*)$/) # filename:lineno:message
+   #if (m/^(.*?):([0-9]+):(.*)$/) # filename:lineno:message
+   if (m/^(.*?):([0-9]+):([0-9]+):(.*)$/) # filename:lineNumber:columnNumber:message
    {
-      $field1 = $1 || "";
-      $field2 = $2 || "";
-      $field3 = $3 || "";
+      $filename = $1 || "";
+      $lineNumber = $2 || "";
+      $columnNumber = $3 || "";
+      $message = $4 || "";
 
-      if ($field3 =~ m/\s+warning:.*/)
+      # See if this is a warning message.
+      $is_warning = 0;
+      for $translation ("warning", @{$translations{"warning"}})
+      {
+         if ($message =~ m/\s+$translation:(.*)/)
+         {
+            $tag=$translation;
+            $message=$1;
+            $is_warning = 1;
+            last;
+         }
+      }
+      # See if this is an error message.
+      $is_error = 0;
+      for $translation ("error", @{$translations{"error"}})
+      {
+         if ($message =~ m/\s+$translation:(.*)/)
+         {
+            $tag=$translation;
+            $message=$1;
+            $is_error = 1;
+            last;
+         }
+      }
+
+      if ($is_warning)
       {
 	 # Warning
-	 print($colors{"warningFileNameColor"}, "$field1:", color("reset"));
-	 print($colors{"warningNumberColor"}, "$field2:", color("reset"));
-	 srcscan($field3, $colors{"warningMessageColor"});
+	 print($colors{"warningFileNameColor"}, "$filename:", color("reset"));
+	 print($colors{"warningNumberColor"}, "$lineNumber:", color("reset"));
+	 print($colors{"warningColumnNumberColor"}, "$columnNumber:", color("reset"));
+	 print($colors{"warningTagColor"}, "$tag:", color("reset"));
+	 srcscan($message, $colors{"warningMessageColor"});
       }
-      else 
+      elsif ($is_error)
       {
 	 # Error
-	 print($colors{"errorFileNameColor"}, "$field1:", color("reset"));
-	 print($colors{"errorNumberColor"}, "$field2:", color("reset"));
-	 srcscan($field3, $colors{"errorMessageColor"});
+	 print($colors{"errorFileNameColor"}, "$filename:", color("reset"));
+	 print($colors{"errorNumberColor"}, "$lineNumber:", color("reset"));
+	 print($colors{"errorColumnNumberColor"}, "$columnNumber:", color("reset"));
+	 print($colors{"errorTagColor"}, "$tag:", color("reset"));
+	 srcscan($message, $colors{"errorMessageColor"});
+      }
+      else{
+	 # Other
+	 print($colors{"otherFileNameColor"}, "$filename:", color("reset"));
+	 print($colors{"otherNumberColor"}, "$lineNumber:", color("reset"));
+	 print($colors{"otherColumnNumberColor"}, "$columnNumber:", color("reset"));
+	 srcscan($message, $colors{"otherMessageColor"});   
+      }
+      print("\n");
+   }
+   elsif (m/^(<command-line>):(.*)$/) # special-location:message
+   {
+      $filename = $1 || "";
+      $lineNumber = $2 || "";
+
+      # See if this is a warning message.
+      $is_warning = 0;
+      for $translation ("warning", @{$translations{"warning"}})
+      {
+         if ($lineNumber =~ m/\s+$translation:.*/)
+         {
+            $is_warning = 1;
+            last;
+         }
+      }
+
+      if ($is_warning)
+      {
+	 # Warning
+	 print($colors{"warningFileNameColor"}, "$filename:", color("reset"));
+	 srcscan($lineNumber, $colors{"warningMessageColor"});
+      }
+      else
+      {
+	 # Error
+	 print($colors{"errorFileNameColor"}, "$filename:", color("reset"));
+	 srcscan($lineNumber, $colors{"errorMessageColor"});
       }
       print("\n");
    }

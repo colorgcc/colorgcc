@@ -22,10 +22,10 @@
 
 # Define the paths to the actual location of the various compilers.
 # (Currently, colorgcc only understands these: g++ gcc c++ cc)
-g++: /usr/bin/g++
-gcc: /usr/bin/gcc
-c++: /usr/bin/c++
-cc:  /usr/bin/cc
+g++: /usr/local/bin/g++
+gcc: /usr/local/bin/gcc
+c++: /usr/local/bin/c++
+cc:  /usr/local/bin/cc
 
 # Don't do color if our terminal type ($TERM) is one of these.
 # (List all terminal types on one line, seperated by whitespace.)
@@ -38,17 +38,25 @@ srcColor: bold cyan
 introColor: reset
 
 # Warnings and errors both have similar formats:
-#    filename:999:Message
+#   filename:999:Message
 # Each field may be assigned a different color.
 
 # Warnings
-warningFileNameColor: reset
-warningNumberColor:   white
-warningMessageColor:  yellow
+warningFileNameColor: green
+warningNumberColor:   red
+warningColumnNumberColor:   reset
+warningTagColor: red
+warningMessageColor:  red
 
 # Errors
-errorFileNameColor: reset
-errorNumberColor:   white
-errorMessageColor:  bold red
+errorFileNameColor: green
+errorNumberColor:   bold red
+errorColumnNumberColor:   reset
+errorTagColor: bold red
+errorMessageColor:  bold red on_black
 
-
+# Others
+otherFileNameColor: green
+otherNumberColor:   reset
+otherColumnNumberColor:   reset
+otherMessageColor:  reset
