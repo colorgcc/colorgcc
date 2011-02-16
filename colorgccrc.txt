@@ -9,11 +9,11 @@
 # The following groups of attributes may be combined for a given color:
 #
 # clear         black      on_black
-# reset	        red        on_red
-# bold	        green      on_green
+# reset         red        on_red
+# bold          green      on_green
 # underline     yellow     on_yellow
 # underscore    blue       on_blue
-# blink	        magenta    on_magenta
+# blink         magenta    on_magenta
 # reverse       cyan       on_cyan
 # concealed     white      on_white
 #
