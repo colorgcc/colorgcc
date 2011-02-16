@@ -101,6 +101,7 @@ sub initDefaults
   $nocolor{"dumb"} = "true";
 
   $colors{"srcColor"} = color("cyan");
+  $colors{"identColor"} = color("green");
   $colors{"introColor"} = color("blue");
 
   $colors{"warningFileNameColor"} = color("yellow");
@@ -158,16 +159,23 @@ sub srcscan
   # Looks for text between ` and ', and colors it srcColor.
 
   my($line, $normalColor) = @_;
-
-  my($srcon) = color("reset") . $colors{"srcColor"};
-  my($srcoff) = color("reset") . $normalColor;
-
   $line = $normalColor . $line;
+
 
   # This substitute replaces `foo' with `AfooB' where A is the escape
   # sequence that turns on the the desired source color, and B is the
   # escape sequence that returns to $normalColor.
+  my($srcon) = color("reset") . $colors{"srcColor"};
+  my($srcoff) = color("reset") . $normalColor;
   $line =~ s/\`(.*?)\'/\`$srcon$1$srcoff\'/g;
+
+  # This substitute replaces ‘foo’ with ‘AfooB’ where A is the escape
+  # sequence that turns on the the desired identifier color, and B is the
+  # escape sequence that returns to $normalColor.
+  my($identon) = color("reset") . $colors{"identColor"};
+  my($identoff) = color("reset") . $normalColor;
+
+  $line =~ s/\‘(.*?)\’/\‘$identon$1$identoff\’/g;
 
   print($line, color("reset"));
 }
