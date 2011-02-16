@@ -8,14 +8,14 @@
 #
 # The following groups of attributes may be combined for a given color:
 #
-# clear         black      on_black   
-# reset	        red        on_red     
-# bold	        green      on_green   
-# underline     yellow     on_yellow  
-# underscore    blue       on_blue    
-# blink	        magenta    on_magenta 
-# reverse       cyan       on_cyan    
-# concealed     white      on_white   
+# clear         black      on_black
+# reset	        red        on_red
+# bold	        green      on_green
+# underline     yellow     on_yellow
+# underscore    blue       on_blue
+# blink	        magenta    on_magenta
+# reverse       cyan       on_cyan
+# concealed     white      on_white
 #
 # For example, srcColor: bold cyan on_yellow
 #
@@ -33,6 +33,9 @@ nocolor: dumb
 
 # Text between ` and ' is usually source code.
 srcColor: bold cyan
+
+# Text between ‘ and ’ is usually a source code identifier.
+identColor: green
 
 # Text other than a warning or error.
 introColor: reset

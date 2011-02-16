@@ -32,14 +32,14 @@
 # Note:
 #
 # colorgcc will only emit color codes if:
-# 
+#
 #    (1) Its STDOUT is a tty and
 #    (2) the value of $TERM is not listed in the "nocolor" option.
 #
 # If colorgcc colorizes the output, the compiler's STDERR will be
 # combined with STDOUT. Otherwise, colorgcc just passes the output from
 # the compiler through without modification.
-# 
+#
 # Author: Jamie Moyers <jmoyers@geeks.com>
 # Started: April 20, 1999
 # Licence: GNU Public License
@@ -53,7 +53,7 @@
 #       Much improved handling of compiler command line arguments.
 #       exec compiler when not colorizing to preserve STDOUT, STDERR.
 #       Fixed my STDIN kludge.
-#       
+#
 #    <ecarotti@athena.polito.it> (Elias S. G. Carotti)
 #       Corrected handling of text like -DPACKAGE=\"Package\"
 #       Spotted return code bug.
@@ -73,12 +73,12 @@
 #       preserves the original STDOUT and STDERR.
 #
 #       Removed STDIN kludge. STDIN being passed correctly now.
-# 
+#
 # 1.3.1 Added kludge to copy STDIN to the compiler's STDIN.
 #
 # 1.3.0 Now correctly returns (I hope) the return code of the compiler
 #       process as its own.
-# 
+#
 # 1.2.1 Applied patch to handle text similar to -DPACKAGE=\"Package\".
 #
 # 1.2.0 Added tty check. If STDOUT is not a tty, don't do color.
@@ -93,83 +93,83 @@ use IPC::Open3;
 
 sub initDefaults
 {
-   $compilerPaths{"gcc"} = "/usr/bin/gcc";
-   $compilerPaths{"g++"} = "/usr/bin/g++";
-   $compilerPaths{"cc"}  = "/usr/bin/cc";
-   $compilerPaths{"c++"} = "/usr/bin/c++";
+  $compilerPaths{"gcc"} = "/usr/bin/gcc";
+  $compilerPaths{"g++"} = "/usr/bin/g++";
+  $compilerPaths{"cc"}  = "/usr/bin/cc";
+  $compilerPaths{"c++"} = "/usr/bin/c++";
 
-   $nocolor{"dumb"} = "true";
+  $nocolor{"dumb"} = "true";
 
-   $colors{"srcColor"} = color("cyan");
-   $colors{"introColor"} = color("blue");
+  $colors{"srcColor"} = color("cyan");
+  $colors{"introColor"} = color("blue");
 
-   $colors{"warningFileNameColor"} = color("yellow");
-   $colors{"warningNumberColor"}   = color("yellow");
-   $colors{"warningMessageColor"}  = color("yellow");
+  $colors{"warningFileNameColor"} = color("yellow");
+  $colors{"warningNumberColor"}   = color("yellow");
+  $colors{"warningMessageColor"}  = color("yellow");
 
-   $colors{"errorFileNameColor"} = color("bold red");
-   $colors{"errorNumberColor"}   = color("bold red");
-   $colors{"errorMessageColor"}  = color("bold red");
+  $colors{"errorFileNameColor"} = color("bold red");
+  $colors{"errorNumberColor"}   = color("bold red");
+  $colors{"errorMessageColor"}  = color("bold red");
 }
 
 sub loadPreferences
 {
-# Usage: loadPreferences("filename");
+  # Usage: loadPreferences("filename");
 
-   my($filename) = @_;
+  my($filename) = @_;
 
-   open(PREFS, "<$filename") || return;
+  open(PREFS, "<$filename") || return;
 
-   while(<PREFS>)
-   {
-      next if (m/^\#.*/);          # It's a comment.
-      next if (!m/(.*):\s*(.*)/);  # It's not of the form "foo: bar".
+  while(<PREFS>)
+  {
+    next if (m/^\#.*/);          # It's a comment.
+    next if (!m/(.*):\s*(.*)/);  # It's not of the form "foo: bar".
 
-      $option = $1;
-      $value = $2;
+    $option = $1;
+    $value = $2;
 
-      if ($option =~ m/cc|c\+\+|gcc|g\+\+/)
+    if ($option =~ m/cc|c\+\+|gcc|g\+\+/)
+    {
+      $compilerPaths{$option} = $value;
+    }
+    elsif ($option eq "nocolor")
+    {
+      # The nocolor option lists terminal types, separated by
+      # spaces, not to do color on.
+      foreach $termtype (split(/\s+/, $value))
       {
-	 $compilerPaths{$option} = $value;
+        $nocolor{$termtype} = "true";
       }
-      elsif ($option eq "nocolor")
-      {
-	 # The nocolor option lists terminal types, separated by
-	 # spaces, not to do color on.
-	 foreach $termtype (split(/\s+/, $value))
-	 {
-	    $nocolor{$termtype} = "true";
-	 }
-      }
-      else
-      {
-	 $colors{$option} = color($value);
-      }
-   }
-   close(PREFS);
+    }
+    else
+    {
+      $colors{$option} = color($value);
+    }
+  }
+  close(PREFS);
 }
 
 sub srcscan
 {
-# Usage: srcscan($text, $normalColor)
-#    $text -- the text to colorize
-#    $normalColor -- The escape sequence to use for non-source text.
+  # Usage: srcscan($text, $normalColor)
+  #    $text -- the text to colorize
+  #    $normalColor -- The escape sequence to use for non-source text.
 
-# Looks for text between ` and ', and colors it srcColor.
+  # Looks for text between ` and ', and colors it srcColor.
 
-   my($line, $normalColor) = @_;
+  my($line, $normalColor) = @_;
 
-   my($srcon) = color("reset") . $colors{"srcColor"};
-   my($srcoff) = color("reset") . $normalColor;
+  my($srcon) = color("reset") . $colors{"srcColor"};
+  my($srcoff) = color("reset") . $normalColor;
 
-   $line = $normalColor . $line;
+  $line = $normalColor . $line;
 
-   # This substitute replaces `foo' with `AfooB' where A is the escape
-   # sequence that turns on the the desired source color, and B is the
-   # escape sequence that returns to $normalColor.
-   $line =~ s/\`(.*?)\'/\`$srcon$1$srcoff\'/g;
+  # This substitute replaces `foo' with `AfooB' where A is the escape
+  # sequence that turns on the the desired source color, and B is the
+  # escape sequence that returns to $normalColor.
+  $line =~ s/\`(.*?)\'/\`$srcon$1$srcoff\'/g;
 
-   print($line, color("reset"));
+  print($line, color("reset"));
 }
 
 #
@@ -183,7 +183,7 @@ initDefaults();
 $configFile = $ENV{"HOME"} . "/.colorgccrc";
 if (-f $configFile)
 {
-   loadPreferences($configFile);
+  loadPreferences($configFile);
 }
 
 # Figure out which compiler to invoke based on our program name.
@@ -192,15 +192,15 @@ $progName = $1 || $0;
 
 $compiler = $compilerPaths{$progName} || $compilerPaths{"gcc"};
 
-# Get the terminal type. 
+# Get the terminal type.
 $terminal = $ENV{"TERM"} || "dumb";
 
 # If it's in the list of terminal types not to color, or if
 # we're writing to something that's not a tty, don't do color.
 if (! -t STDOUT || $nocolor{$terminal})
 {
-   exec $compiler, @ARGV
-      or die("Couldn't exec");
+  exec $compiler, @ARGV
+  or die("Couldn't exec");
 }
 
 # Keep the pid of the compiler process so we can get its return
@@ -210,38 +210,38 @@ $compiler_pid = open3('<&STDIN', \*GCCOUT, '', $compiler, @ARGV);
 # Colorize the output from the compiler.
 while(<GCCOUT>)
 {
-   if (m/^(.*?):([0-9]+):(.*)$/) # filename:lineno:message
-   {
-      $field1 = $1 || "";
-      $field2 = $2 || "";
-      $field3 = $3 || "";
+  if (m/^(.*?):([0-9]+):(.*)$/) # filename:lineno:message
+  {
+    $field1 = $1 || "";
+    $field2 = $2 || "";
+    $field3 = $3 || "";
 
-      if ($field3 =~ m/\s+warning:.*/)
-      {
-	 # Warning
-	 print($colors{"warningFileNameColor"}, "$field1:", color("reset"));
-	 print($colors{"warningNumberColor"}, "$field2:", color("reset"));
-	 srcscan($field3, $colors{"warningMessageColor"});
-      }
-      else 
-      {
-	 # Error
-	 print($colors{"errorFileNameColor"}, "$field1:", color("reset"));
-	 print($colors{"errorNumberColor"}, "$field2:", color("reset"));
-	 srcscan($field3, $colors{"errorMessageColor"});
-      }
-      print("\n");
-   }
-   elsif (m/^(.*?):(.+):$/) # filename:message:
-   {
-      # No line number, treat as an "introductory" line of text.
-      srcscan($_, $colors{"introColor"});
-   }
-   else # Anything else.        
-   {
-      # Doesn't seem to be a warning or an error. Print normally.
-      print(color("reset"), $_);
-   }
+    if ($field3 =~ m/\s+warning:.*/)
+    {
+      # Warning
+      print($colors{"warningFileNameColor"}, "$field1:", color("reset"));
+      print($colors{"warningNumberColor"}, "$field2:", color("reset"));
+      srcscan($field3, $colors{"warningMessageColor"});
+    }
+    else
+    {
+      # Error
+      print($colors{"errorFileNameColor"}, "$field1:", color("reset"));
+      print($colors{"errorNumberColor"}, "$field2:", color("reset"));
+      srcscan($field3, $colors{"errorMessageColor"});
+    }
+    print("\n");
+  }
+  elsif (m/^(.*?):(.+):$/) # filename:message:
+  {
+    # No line number, treat as an "introductory" line of text.
+    srcscan($_, $colors{"introColor"});
+  }
+  else # Anything else.
+  {
+    # Doesn't seem to be a warning or an error. Print normally.
+    print(color("reset"), $_);
+  }
 }
 
 # Get the return code of the compiler and exit with that.
