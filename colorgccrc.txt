@@ -35,7 +35,8 @@ nocolor: dumb
 srcColor: bold cyan
 
 # Text other than a warning or error.
-introColor: reset
+introFileNameColor: reset
+introMessageColor:  blue
 
 # Warnings and errors both have similar formats:
 #    filename:999:Message
@@ -51,4 +52,7 @@ errorFileNameColor: reset
 errorNumberColor:   white
 errorMessageColor:  bold red
 
-
+# Notes
+noteFileNameColor: reset
+noteNumberColor:   white
+noteMessageColor:  green
