@@ -88,21 +88,24 @@
 #
 # 1.0.0 Initial Version
 
+use strict;
+
 use Term::ANSIColor;
 use IPC::Open3;
+use Cwd 'abs_path';
+
+my(%nocolor, %colors, %compilerPaths);
+my($unfinishedQuote, $previousColor);
 
 sub initDefaults
 {
-  $compilerPaths{"gcc"} = "/usr/bin/gcc";
-  $compilerPaths{"g++"} = "/usr/bin/g++";
-  $compilerPaths{"cc"}  = "/usr/bin/cc";
-  $compilerPaths{"c++"} = "/usr/bin/c++";
-
   $nocolor{"dumb"} = "true";
 
   $colors{"srcColor"} = color("cyan");
   $colors{"identColor"} = color("green");
-  $colors{"introColor"} = color("blue");
+
+  $colors{"introFileNameColor"} = color("blue");
+  $colors{"introMessageColor"}  = color("blue");
 
   $colors{"warningFileNameColor"} = color("yellow");
   $colors{"warningNumberColor"}   = color("yellow");
@@ -111,6 +114,10 @@ sub initDefaults
   $colors{"errorFileNameColor"} = color("bold red");
   $colors{"errorNumberColor"}   = color("bold red");
   $colors{"errorMessageColor"}  = color("bold red");
+
+  $colors{"noteFileNameColor"} = color("green");
+  $colors{"noteNumberColor"}   = color("green");
+  $colors{"noteMessageColor"}  = color("green");
 }
 
 sub loadPreferences
@@ -126,25 +133,25 @@ sub loadPreferences
     next if (m/^\#.*/);          # It's a comment.
     next if (!m/(.*):\s*(.*)/);  # It's not of the form "foo: bar".
 
-    $option = $1;
-    $value = $2;
+    my $option = $1;
+    my $value = $2;
 
-    if ($option =~ m/cc|c\+\+|gcc|g\+\+/)
-    {
-      $compilerPaths{$option} = $value;
-    }
-    elsif ($option eq "nocolor")
+    if ($option eq "nocolor")
     {
       # The nocolor option lists terminal types, separated by
       # spaces, not to do color on.
-      foreach $termtype (split(/\s+/, $value))
+      foreach my $term (split(' ', $value))
       {
-        $nocolor{$termtype} = "true";
+        $nocolor{$term} = 1;
       }
+    }
+    elsif (defined $colors{$option})
+    {
+      $colors{$option} = color($value);
     }
     else
     {
-      $colors{$option} = color($value);
+      $compilerPaths{$option} = $value;
     }
   }
   close(PREFS);
@@ -159,14 +166,38 @@ sub srcscan
   # Looks for text between ` and ', and colors it srcColor.
 
   my($line, $normalColor) = @_;
-  $line = $normalColor . $line;
 
+  if (defined $normalColor)
+  {
+    $previousColor = $normalColor;
+  }
+  else
+  {
+    $normalColor = $previousColor;
+  }
 
-  # This substitute replaces `foo' with `AfooB' where A is the escape
+  # These substitutions replaces `foo' with `AfooB' where A is the escape
   # sequence that turns on the the desired source color, and B is the
   # escape sequence that returns to $normalColor.
+
   my($srcon) = color("reset") . $colors{"srcColor"};
   my($srcoff) = color("reset") . $normalColor;
+
+  $line = ($unfinishedQuote? $srcon : $normalColor) . $line;
+
+  # Handle multi-line quotes.
+  if ($unfinishedQuote) {
+    if ($line =~ s/^([^\`]*?)\'/$1$srcoff\'/)
+    {
+      $unfinishedQuote = 0;
+    }
+  }
+  if ($line =~ s/\`([^\']*?)$/\`$srcon$1/)
+  {
+    $unfinishedQuote = 1;
+  }
+
+  # Single line quoting.
   $line =~ s/\`(.*?)\'/\`$srcon$1$srcoff\'/g;
 
   # This substitute replaces ‘foo’ with ‘AfooB’ where A is the escape
@@ -188,41 +219,84 @@ sub srcscan
 initDefaults();
 
 # Read the configuration file, if there is one.
-$configFile = $ENV{"HOME"} . "/.colorgccrc";
+my $configFile = $ENV{"HOME"} . "/.colorgccrc";
 if (-f $configFile)
 {
   loadPreferences($configFile);
 }
+elsif (-f '/etc/colorgcc/colorgccrc')
+{
+  loadPreferences('/etc/colorgcc/colorgccrc');
+}
+
+# Set our default output color.  This presumes that any unrecognized output
+# is an error.
+$previousColor = $colors{"errorMessageColor"};
 
 # Figure out which compiler to invoke based on our program name.
 $0 =~ m%.*/(.*)$%;
-$progName = $1 || $0;
+my $progName = $1 || $0;
+my $compiler_pid;
 
-$compiler = $compilerPaths{$progName} || $compilerPaths{"gcc"};
-
-# Get the terminal type.
-$terminal = $ENV{"TERM"} || "dumb";
-
-# If it's in the list of terminal types not to color, or if
-# we're writing to something that's not a tty, don't do color.
-if (! -t STDOUT || $nocolor{$terminal})
+# If called as "colorgcc", just filter STDIN to STDOUT.
+if ($progName eq 'colorgcc')
 {
-  exec $compiler, @ARGV
-  or die("Couldn't exec");
+  open(GCCOUT, "<&STDIN");
 }
+else
+{
+  # See if the user asked for a specific compiler.
+  my $compiler;
+  if (!defined($compiler = $compilerPaths{$progName}))
+  {
+    # Find our wrapper dir on the PATH and tweak the PATH to remove
+    # everything up-to and including our wrapper dir.
+    if ($0 =~ m#(.*)/#)
+    {
+      # We were called with an explicit path, so trim that off the PATH.
+      my $find = $1;
+      $find = abs_path($1) unless $find =~ m#^/#;
+      $ENV{'PATH'} =~ s#.*(^|:)\Q$find\E(:|$)##;
+    }
+    else
+    {
+      my(@dirs) = split(/:/, $ENV{'PATH'});
+      while (defined($_ = shift @dirs))
+      {
+        if (-x "$_/$progName")
+        {
+          $ENV{'PATH'} = join(':', @dirs);
+          last;
+        }
+      }
+    }
+    $compiler = $progName;
+  }
 
-# Keep the pid of the compiler process so we can get its return
-# code and use that as our return code.
-$compiler_pid = open3('<&STDIN', \*GCCOUT, '', $compiler, @ARGV);
+  # Get the terminal type.
+  my $terminal = $ENV{"TERM"} || "dumb";
+
+  # If it's in the list of terminal types not to color, or if
+  # we're writing to something that's not a tty, don't do color.
+  if (! -t STDOUT || $nocolor{$terminal})
+  {
+    exec $compiler, @ARGV
+    or die("Couldn't exec");
+  }
+
+  # Keep the pid of the compiler process so we can get its return
+  # code and use that as our return code.
+  $compiler_pid = open3('<&STDIN', \*GCCOUT, \*GCCOUT, $compiler, @ARGV);
+}
 
 # Colorize the output from the compiler.
 while(<GCCOUT>)
 {
-  if (m/^(.*?):([0-9]+):(.*)$/) # filename:lineno:message
+  if (m#^(.+?\.[^:/ ]+):([0-9]+):(.*)$#) # filename:lineno:message
   {
-    $field1 = $1 || "";
-    $field2 = $2 || "";
-    $field3 = $3 || "";
+    my $field1 = $1 || "";
+    my $field2 = $2 || "";
+    my $field3 = $3 || "";
 
     if ($field3 =~ m/\s+warning:.*/)
     {
@@ -231,32 +305,43 @@ while(<GCCOUT>)
       print($colors{"warningNumberColor"}, "$field2:", color("reset"));
       srcscan($field3, $colors{"warningMessageColor"});
     }
-    else
+    elsif ($field3 =~ m/\s+error:.*/)
     {
       # Error
       print($colors{"errorFileNameColor"}, "$field1:", color("reset"));
       print($colors{"errorNumberColor"}, "$field2:", color("reset"));
       srcscan($field3, $colors{"errorMessageColor"});
+    } else
+    {
+      # Note
+      print($colors{"noteFileNameColor"}, "$field1:", color("reset"));
+      print($colors{"noteNumberColor"}, "$field2:", color("reset"));
+      srcscan($field3, $colors{"noteMessageColor"});
     }
     print("\n");
   }
+  elsif (m/^:.+`.*'$/) # filename:message:
+  {
+    srcscan($_, $colors{"warningMessageColor"});
+  }
   elsif (m/^(.*?):(.+):$/) # filename:message:
   {
+    my $field1 = $1 || "";
+    my $field2 = $2 || "";
     # No line number, treat as an "introductory" line of text.
-    srcscan($_, $colors{"introColor"});
+    print($colors{"introFileNameColor"}, "$field1:", color("reset"));
+    srcscan($field2, $colors{"introMessageColor"});
+    print("\n");
   }
   else # Anything else.
   {
-    # Doesn't seem to be a warning or an error. Print normally.
-    print(color("reset"), $_);
+    srcscan($_, undef);
   }
 }
 
-# Get the return code of the compiler and exit with that.
-waitpid($compiler_pid, 0);
-exit ($? >> 8);
-
-
-
-
-
+if ($compiler_pid)
+{
+  # Get the return code of the compiler and exit with that.
+  waitpid($compiler_pid, 0);
+  exit ($? >> 8);
+}
