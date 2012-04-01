@@ -10,8 +10,6 @@
 # A wrapper to colorize the output from compilers whose messages
 # match the "gcc" format.
 #
-# Requires the ANSIColor module from CPAN.
-#
 # Usage:
 #
 # In a directory that occurs in your PATH _before_ the directory
