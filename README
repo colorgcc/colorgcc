@@ -9,6 +9,7 @@ Requires the ANSIColor module from CPAN.
 
 Usage:
 
+Option 1)
 In a directory that occurs in your PATH _before_ the directory
 where the compiler lives, create a softlink to colorgcc for
 each compiler you want to colorize:
@@ -20,6 +21,15 @@ each compiler you want to colorize:
 
 That's it. When "g++" is invoked, colorgcc is run instead.
 colorgcc looks at the program name to figure out which compiler to run.
+
+Option 2)
+In a directory in your PATH, create the following links to colorgcc:
+   color-g++ -> colorgcc
+   color-c++ -> colorgcc
+   color-gcc -> colorgcc
+   color-cc  -> colorgcc
+Then override the compiler macros for make, for example:
+   make CXX=color-g++ CC=color-gcc
 
 The default settings can be overridden with ~/.colorgccrc.
 See the comments in the sample .colorgccrc for more information.
