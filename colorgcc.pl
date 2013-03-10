@@ -243,21 +243,21 @@ $compiler_pid = open3('<&STDIN', \*GCCOUT, '', $compiler, @ARGV);
 while(<GCCOUT>)
 {
   # filename:lineno:columnno: warning/error: message [-flag]
-  if (m/^(.*?):([0-9]+):([0-9]+):(\s+warning|\s+error):(.*?)(\[.*?\])$/)
+  if (m/^(.*?):([0-9]+):([0-9]*:?)(\s+warning|\s+error):(.*?)(\[.*?\])$/)
   {
-    $field1 = $1 || "";
-    $field2 = $2 || "";
-    $field3 = $3 || "";
-    $field4 = $4 || "";
-    $field5 = $5 || "";
-    $field6 = $6 || "";
+    $field1 = $1 || ""; # Filename
+    $field2 = $2 || ""; # Line
+    $field3 = $3 || ""; # Column
+    $field4 = $4 || ""; # warning/error
+    $field5 = $5 || ""; # message
+    $field6 = $6 || ""; # flag
 
     if ($field4 =~ m/\s+warning/)
     {
       # Warning
       print($colors{"warningFileNameColor"}     , "$field1:", color("reset"));
       print($colors{"warningLineNumberColor"}   , "$field2:", color("reset"));
-      print($colors{"warningColumnNumberColor"} , "$field3:", color("reset"));
+      print($colors{"warningColumnNumberColor"} , "$field3", color("reset"));
       print($colors{"warningWEColor"}           , "$field4:", color("reset"));
       srcscan($field5, $colors{"warningMessageColor"});
       print($colors{"warningFlagColor"}         , "$field6", color("reset"));
@@ -267,7 +267,7 @@ while(<GCCOUT>)
       # Error
       print($colors{"errorFileNameColor"}     , "$field1:", color("reset"));
       print($colors{"errorLineNumberColor"}   , "$field2:", color("reset"));
-      print($colors{"errorColumnNumberColor"} , "$field3:", color("reset"));
+      print($colors{"errorColumnNumberColor"} , "$field3", color("reset"));
       print($colors{"errorWEColor"}           , "$field4:", color("reset"));
       srcscan($field5, $colors{"errorMessageColor"});
       print($colors{"errorFlagColor"}         , "$field6", color("reset"));
