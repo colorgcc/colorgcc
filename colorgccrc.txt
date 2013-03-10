@@ -49,20 +49,21 @@ introFileNameColor: reset
 introMessageColor:  blue
 
 # Warnings and errors both have similar formats:
-#    filename:999:Message
+#    filename:line:column: warning/error: Message [flag]
 # Each field may be assigned a different color.
 
 # Warnings
 warningFileNameColor: reset
-warningNumberColor:   white
+warningLineNumberColor:   white
+warningColumnNumberColor:   white
+warningWEColor:  bold yellow
 warningMessageColor:  yellow
+warningFlagColor:  reset
 
 # Errors
 errorFileNameColor: reset
-errorNumberColor:   white
-errorMessageColor:  bold red
-
-# Notes
-noteFileNameColor: reset
-noteNumberColor:   white
-noteMessageColor:  green
+errorLineNumberColor:   white
+errorColumnNumberColor:   white
+errorWEColor:  bold red
+errorMessageColor:  red
+errorFlagColor:  reset

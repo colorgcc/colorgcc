@@ -3,7 +3,7 @@
 #
 # colorgcc
 #
-# Version: 1.3.2
+# Version: 1.4.0
 #
 # $Id: colorgcc,v 1.10 1999/04/29 17:15:52 jamoyers Exp $
 #
@@ -75,7 +75,15 @@
 #    <rik@kde.org> (Rik Hemsley)
 #       Found STDIN bug.
 #
+#    <foivos@zakkak.net> (Foivos S. Zakkak)
+#       See 1.4.0 changes bellow
+#
 # Changes:
+#
+# 1.4.0 Support filename:lineno:columnno: warning/error: message [-flag]
+#       used to be filename:lineno: warning/error: message
+#
+#       Enable colorization of each field
 #
 # 1.3.2 Better handling of command line arguments to compiler.
 #
@@ -110,17 +118,23 @@ sub initDefaults
 
   $nocolor{"dumb"} = "true";
 
-  $colors{"srcColor"} = color("cyan");
+  $colors{"srcColor"}   = color("cyan");
   $colors{"identColor"} = color("green");
   $colors{"introColor"} = color("blue");
 
-  $colors{"warningFileNameColor"} = color("yellow");
-  $colors{"warningNumberColor"}   = color("yellow");
-  $colors{"warningMessageColor"}  = color("yellow");
+  $colors{"warningFileNameColor"}     = color("yellow");
+  $colors{"warningLineNumberColor"}   = color("yellow");
+  $colors{"warningColumnNumberColor"} = color("yellow");
+  $colors{"warningWEColor"}           = color("yellow");
+  $colors{"warningMessageColor"}      = color("yellow");
+  $colors{"warningFlagColor"}         = color("yellow");
 
-  $colors{"errorFileNameColor"} = color("bold red");
-  $colors{"errorNumberColor"}   = color("bold red");
-  $colors{"errorMessageColor"}  = color("bold red");
+  $colors{"errorFileNameColor"}       = color("bold red");
+  $colors{"errorLineNumberColor"}     = color("bold red");
+  $colors{"errorColumnNumberColor"}   = color("bold red");
+  $colors{"errorWEColor"}             = color("bold red");
+  $colors{"errorMessageColor"}        = color("bold red");
+  $colors{"errorFlagColor"}           = color("bold red");
 }
 
 sub loadPreferences
@@ -228,25 +242,35 @@ $compiler_pid = open3('<&STDIN', \*GCCOUT, '', $compiler, @ARGV);
 # Colorize the output from the compiler.
 while(<GCCOUT>)
 {
-  if (m/^(.*?):([0-9]+):(.*)$/) # filename:lineno:message
+  # filename:lineno:columnno: warning/error: message [-flag]
+  if (m/^(.*?):([0-9]+):([0-9]+):(\s+warning|\s+error):(.*?)(\[.*?\])$/)
   {
     $field1 = $1 || "";
     $field2 = $2 || "";
     $field3 = $3 || "";
+    $field4 = $4 || "";
+    $field5 = $5 || "";
+    $field6 = $6 || "";
 
-    if ($field3 =~ m/\s+warning:.*/)
+    if ($field4 =~ m/\s+warning/)
     {
       # Warning
-      print($colors{"warningFileNameColor"}, "$field1:", color("reset"));
-      print($colors{"warningNumberColor"}, "$field2:", color("reset"));
-      srcscan($field3, $colors{"warningMessageColor"});
+      print($colors{"warningFileNameColor"}     , "$field1:", color("reset"));
+      print($colors{"warningLineNumberColor"}   , "$field2:", color("reset"));
+      print($colors{"warningColumnNumberColor"} , "$field3:", color("reset"));
+      print($colors{"warningWEColor"}           , "$field4:", color("reset"));
+      srcscan($field5, $colors{"warningMessageColor"});
+      print($colors{"warningFlagColor"}         , "$field6", color("reset"));
     }
     else
     {
       # Error
-      print($colors{"errorFileNameColor"}, "$field1:", color("reset"));
-      print($colors{"errorNumberColor"}, "$field2:", color("reset"));
-      srcscan($field3, $colors{"errorMessageColor"});
+      print($colors{"errorFileNameColor"}     , "$field1:", color("reset"));
+      print($colors{"errorLineNumberColor"}   , "$field2:", color("reset"));
+      print($colors{"errorColumnNumberColor"} , "$field3:", color("reset"));
+      print($colors{"errorWEColor"}           , "$field4:", color("reset"));
+      srcscan($field5, $colors{"errorMessageColor"});
+      print($colors{"errorFlagColor"}         , "$field6", color("reset"));
     }
     print("\n");
   }
@@ -265,8 +289,3 @@ while(<GCCOUT>)
 # Get the return code of the compiler and exit with that.
 waitpid($compiler_pid, 0);
 exit ($? >> 8);
-
-
-
-
-
