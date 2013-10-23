@@ -1,4 +1,4 @@
-#! /usr/bin/perl -w
+#!/usr/bin/perl -w
 
 #
 # colorgcc
@@ -98,29 +98,33 @@
 #
 # 1.0.0 Initial Version
 
+#use strict;
+use warnings;
+use File::Basename;
+use File::Spec;
 use Term::ANSIColor;
 use IPC::Open3;
+use Cwd qw(abs_path);
 
 sub initDefaults
 {
-  $compilerPaths{"gcc"} = "/usr/bin/gcc";
-  $compilerPaths{"g++"} = "/usr/bin/g++";
-  $compilerPaths{"cc"}  = "/usr/bin/cc";
-  $compilerPaths{"c++"} = "/usr/bin/c++";
-
   $nocolor{"dumb"} = "true";
 
-  $colors{"srcColor"} = color("cyan");
-  $colors{"identColor"} = color("green");
-  $colors{"introColor"} = color("blue");
+   $colors{"srcColor"}             = color("bold white");
+   $colors{"identColor"}           = color("bold green"); 
+   $colors{"introColor"}           = color("bold green");
 
-  $colors{"warningFileNameColor"} = color("yellow");
-  $colors{"warningNumberColor"}   = color("yellow");
-  $colors{"warningMessageColor"}  = color("yellow");
+   $colors{"noteFileNameColor"}    = color("bold cyan");
+   $colors{"noteNumberColor"}      = color("bold white");
+   $colors{"noteMessageColor"}     = color("bold cyan");
 
-  $colors{"errorFileNameColor"} = color("bold red");
-  $colors{"errorNumberColor"}   = color("bold red");
-  $colors{"errorMessageColor"}  = color("bold red");
+   $colors{"warningFileNameColor"} = color("bold cyan");
+   $colors{"warningNumberColor"}   = color("bold white");
+   $colors{"warningMessageColor"}  = color("bold yellow");
+
+   $colors{"errorFileNameColor"}   = color("bold cyan");
+   $colors{"errorNumberColor"}     = color("bold white");
+   $colors{"errorMessageColor"}    = color("bold red");
 }
 
 sub loadPreferences
@@ -175,7 +179,7 @@ sub srcscan
   # This substitute replaces `foo' with `AfooB' where A is the escape
   # sequence that turns on the the desired source color, and B is the
   # escape sequence that returns to $normalColor.
-  my($srcon) = color("reset") . $colors{"srcColor"};
+  my($srcon)  = color("reset") . $colors{"srcColor"};
   my($srcoff) = color("reset") . $normalColor;
   $line =~ s/\`(.*?)\'/\`$srcon$1$srcoff\'/g;
 
@@ -206,9 +210,46 @@ if (-f $configFile)
 
 # Figure out which compiler to invoke based on our program name.
 $0 =~ m%.*/(.*)$%;
+$progDir  = abs_path( dirname( $0 ) );
 $progName = $1 || $0;
 
-$compiler = $compilerPaths{$progName} || $compilerPaths{"gcc"};
+#inspired from Thierry's snippet (Tve, 4-Jul-2002)
+#http://www.tek-tips.com/viewthread.cfm?qid=305851
+sub findPath
+{
+   my $program = shift;
+
+   # Load the path
+   my @path = File::Spec->path();
+
+   # Loop and find if the file is in one of the paths
+   foreach (@path) {
+     # use realpath absolute path to be sure of the directory we keep
+     my $dir = abs_path( $_ );
+
+     # do not process the directory of the current running script
+     next if ($dir eq $progDir);
+
+     # Concatenate the file
+     my $file = $dir . '/' . $program;
+
+     # continue untill file is found
+     next if (! -e $file);
+     next if (! -f $file);
+
+     $file = abs_path( $file );
+     $dir  = dirname ( $file );
+
+     # check again if not the directory of the current running script
+     next if ($dir eq $progDir);
+
+     return $file
+   }
+}
+
+$compiler = $compilerPaths{$progName} || findPath($progName) || $compilerPaths{"gcc"} || findPath("gcc");
+# debug  print("\ncompiler=$compiler\n");
+
 
 # Get the terminal type.
 $terminal = $ENV{"TERM"} || "dumb";
@@ -234,20 +275,45 @@ while(<GCCOUT>)
     $field2 = $2 || "";
     $field3 = $3 || "";
 
-    if ($field3 =~ m/\s+warning:.*/)
+    if (/instantiated from /)
+    {
+      srcscan($_, $colors{"introColor"})
+    }
+    elsif ($field3 =~ m/\s+note:.*/)
+    {
+      # Note
+      print($colors{"noteFileNameColor"}, "$field1:", color("reset"));
+      print($colors{"noteNumberColor"},   "$field2:", color("reset"));
+      srcscan($field3, $colors{"noteMessageColor"});
+      print("\n");
+    }
+    elsif ($field3 =~ m/\s+warning:.*/)
     {
       # Warning
       print($colors{"warningFileNameColor"}, "$field1:", color("reset"));
-      print($colors{"warningNumberColor"}, "$field2:", color("reset"));
+      print($colors{"warningNumberColor"},   "$field2:", color("reset"));
       srcscan($field3, $colors{"warningMessageColor"});
+      print("\n");
     }
     else
     {
       # Error
       print($colors{"errorFileNameColor"}, "$field1:", color("reset"));
-      print($colors{"errorNumberColor"}, "$field2:", color("reset"));
+      print($colors{"errorNumberColor"},   "$field2:", color("reset"));
       srcscan($field3, $colors{"errorMessageColor"});
+      print("\n");
     }
+  }
+  elsif (m/(.+):\((.+)\):(.*)$/) # linker error
+  {
+    $field1 = $1 || "";
+    $field2 = $2 || "";
+    $field3 = $3 || "";
+
+    # Error
+    print($colors{"errorFileNameColor"}, "$field1", color("reset"), ":(");
+    print($colors{"errorNumberColor"},   "$field2", color("reset"), "):");
+    srcscan($field3, $colors{"errorMessageColor"});
     print("\n");
   }
   elsif (m/^(.*?):(.+):$/) # filename:message:
@@ -265,8 +331,3 @@ while(<GCCOUT>)
 # Get the return code of the compiler and exit with that.
 waitpid($compiler_pid, 0);
 exit ($? >> 8);
-
-
-
-
-
