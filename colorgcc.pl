@@ -3,9 +3,8 @@
 #
 # colorgcc
 #
-# Version: 1.3.2
+# Version: 1.4
 #
-# $Id: colorgcc,v 1.10 1999/04/29 17:15:52 jamoyers Exp $
 #
 # A wrapper to colorize the output from compilers whose messages
 # match the "gcc" format.
@@ -76,6 +75,9 @@
 #       Found STDIN bug.
 #
 # Changes:
+#
+# 1.4   Search compiler within $PATH -> added function findPath()
+#       More highlighting support: "instanciated from", "note:" and linker error 
 #
 # 1.3.2 Better handling of command line arguments to compiler.
 #
