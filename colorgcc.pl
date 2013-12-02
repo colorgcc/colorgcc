@@ -3,7 +3,7 @@
 #
 # colorgcc
 #
-# Version: 1.4
+# Version: 1.4.1
 #
 #
 # A wrapper to colorize the output from compilers whose messages
@@ -79,8 +79,8 @@
 # 1.4.1 Merged with gentoo-patches from fesselk
 #       https://github.com/fesselk/colorgcc/commit/5f458441c225a4c5e69ea7b9097e31aabc4cc816
 #
-# 1.4   Search compiler within $PATH -> added function findPath()
-#       More highlighting support: "instanciated from", "note:" and linker error 
+# 1.4.0 Search compiler within $PATH -> added function findPath()
+#       More highlighting lines: "instanciated from", "note:" and linker error 
 #
 # 1.3.2 Better handling of command line arguments to compiler.
 #
@@ -389,7 +389,8 @@ while(<GCCOUT>)
   }
   else # Anything else.
   {
-    srcscan($_, undef);
+    # Doesn't seem to be a warning or an error. Print normally.
+    print(color("reset"), $_);
   }
 }
 
