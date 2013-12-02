@@ -1,11 +1,13 @@
 colorgcc
 
-Version: 1.3.2
+Version: 1.4.1
 
 A wrapper to colorize the output from compilers whose messages
 match the "gcc" format.
 
-Requires the ANSIColor module from CPAN.
+Requires the ANSIColor module from CPAN. 
+Requires also the modules Open3, Basename, Spec and Cwd.
+
 
 Usage:
 
@@ -14,9 +16,10 @@ In a directory that occurs in your PATH _before_ the directory
 where the compiler lives, create a softlink to colorgcc for
 each compiler you want to colorize:
 
-   g++ -> colorgcc
    gcc -> colorgcc
+   g++ -> colorgcc
    cc  -> colorgcc
+   c++ -> colorgcc
    etc.
 
 That's it. When "g++" is invoked, colorgcc is run instead.
