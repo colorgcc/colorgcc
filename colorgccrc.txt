@@ -20,12 +20,10 @@
 # For example, srcColor: bold cyan on_yellow
 #
 
-# Define the paths to the actual location of the various compilers.
-# (Currently, colorgcc only understands these: g++ gcc c++ cc)
-g++: /usr/bin/g++
-gcc: /usr/bin/gcc
-c++: /usr/bin/c++
-cc:  /usr/bin/cc
+# Only define the paths to the actual location of the various compilers 
+# if you need to do something weird.  For normal installs, 
+# we'll figure out who to call next automatically based on $PATH. 
+# If the requested compiler is not found => search "gcc"
 
 # Define aliases for the usual compilers to allow using colorgcc
 # without path munging.  (E.g. make CXX=color-g++)
@@ -40,9 +38,6 @@ nocolor: dumb
 
 # Text between ` and ' is usually source code.
 srcColor: bold cyan
-
-# Text between ‘ and ’ is usually a source code identifier.
-identColor: green
 
 # Text other than a warning or error.
 introFileNameColor: reset
