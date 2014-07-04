@@ -76,7 +76,7 @@
 #
 # Changes:
 #
-# 1.4.2 Added detection for GCC_COLORS environment variable (gcc 4.9 -fdiagnotics-color)
+# 1.4.2 Added detection for GCC_COLORS environment variable (gcc 4.9 -fdiagnostics-color)
 #
 # 1.4.1 Merged with gentoo-patches from fesselk
 #       https://github.com/fesselk/colorgcc/commit/5f458441c225a4c5e69ea7b9097e31aabc4cc816
