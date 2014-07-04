@@ -3,7 +3,7 @@
 #
 # colorgcc
 #
-# Version: 1.4.1
+# Version: 1.4.2
 #
 #
 # A wrapper to colorize the output from compilers whose messages
@@ -76,6 +76,8 @@
 #
 # Changes:
 #
+# 1.4.2 Added detection for GCC_COLORS environment variable (gcc 4.9 -fdiagnotics-color)
+#
 # 1.4.1 Merged with gentoo-patches from fesselk
 #       https://github.com/fesselk/colorgcc/commit/5f458441c225a4c5e69ea7b9097e31aabc4cc816
 #
@@ -117,6 +119,7 @@ my($unfinishedQuote, $previousColor);
 sub initDefaults
 {
   $nocolor{"dumb"} = "true";
+  $compilerPaths{"gcc"} = "/usr/bin/gcc";
 
   $colors{"srcColor"}             = color("bold white");
   $colors{"identColor"}           = color("bold green"); 
@@ -307,8 +310,9 @@ else
   my $terminal = $ENV{"TERM"} || "dumb";
 
   # If it's in the list of terminal types not to color, or if
+  # GCC (in version 4.9+) is set to do its own coloring, or if
   # we're writing to something that's not a tty, don't do color.
-  if (! -t STDOUT || $nocolor{$terminal})
+  if (! -t STDOUT || $nocolor{$terminal} || defined $ENV{"GCC_COLORS"})
   {
     exec $compiler, @ARGV
     or die("Couldn't exec");
