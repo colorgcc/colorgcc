@@ -3,7 +3,7 @@
 #
 # colorgcc
 #
-# Version: 1.4.1
+# Version: 1.4.2
 #
 #
 # A wrapper to colorize the output from compilers whose messages
@@ -76,6 +76,8 @@
 #
 # Changes:
 #
+# 1.4.2 Added detection for GCC_COLORS environment variable (gcc 4.9 -fdiagnostics-color)
+#
 # 1.4.1 Merged with gentoo-patches from fesselk
 #       https://github.com/fesselk/colorgcc/commit/5f458441c225a4c5e69ea7b9097e31aabc4cc816
 #
@@ -117,6 +119,7 @@ my($unfinishedQuote, $previousColor);
 sub initDefaults
 {
   $nocolor{"dumb"} = "true";
+  $compilerPaths{"gcc"} = "/usr/bin/gcc";
 
   $colors{"srcColor"}             = color("bold white");
   $colors{"identColor"}           = color("bold green"); 
@@ -254,7 +257,7 @@ $previousColor = $colors{"errorMessageColor"};
 # Figure out which compiler to invoke based on our program name.
 $0 =~ m%.*/(.*)$%;
 my $progDir  = abs_path( dirname( $0 ) );
-my $progName = $1 || $0;
+my $progName = $1 || "gcc";
 my $compiler_pid;
 
 #inspired from Thierry's snippet (Tve, 4-Jul-2002)
@@ -291,33 +294,26 @@ sub findPath
    }
 }
 
-# If called as "colorgcc", just filter STDIN to STDOUT.
-if ($progName eq 'colorgcc')
+# See if the user asked for a specific compiler.
+my $compiler = 
+$compilerPaths{$progName} || findPath($progName) || 
+$compilerPaths{"gcc"}     || findPath("gcc");
+
+# Get the terminal type.
+my $terminal = $ENV{"TERM"} || "dumb";
+
+# If it's in the list of terminal types not to color, or if
+# GCC (in version 4.9+) is set to do its own coloring, or if
+# we're writing to something that's not a tty, don't do color.
+if (! -t STDOUT || $nocolor{$terminal} || defined $ENV{"GCC_COLORS"})
 {
-  open(GCCOUT, "<&STDIN");
+  exec $compiler, @ARGV
+  or die("Couldn't exec");
 }
-else
-{  
-  # See if the user asked for a specific compiler.
-  my $compiler = 
-    $compilerPaths{$progName} || findPath($progName) || 
-    $compilerPaths{"gcc"}     || findPath("gcc");
 
-  # Get the terminal type.
-  my $terminal = $ENV{"TERM"} || "dumb";
-
-  # If it's in the list of terminal types not to color, or if
-  # we're writing to something that's not a tty, don't do color.
-  if (! -t STDOUT || $nocolor{$terminal})
-  {
-    exec $compiler, @ARGV
-    or die("Couldn't exec");
-  }
-
-  # Keep the pid of the compiler process so we can get its return
-  # code and use that as our return code.
-  $compiler_pid = open3('<&STDIN', \*GCCOUT, \*GCCOUT, $compiler, @ARGV);
-}
+# Keep the pid of the compiler process so we can get its return
+# code and use that as our return code.
+$compiler_pid = open3('<&STDIN', \*GCCOUT, \*GCCOUT, $compiler, @ARGV);
 
 # Colorize the output from the compiler.
 while(<GCCOUT>)
