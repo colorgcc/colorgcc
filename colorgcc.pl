@@ -160,6 +160,14 @@ sub loadPreferences
   close(PREFS);
 }
 
+sub loadEnvPreferences
+{
+    $compilerPaths{"gcc"} = $ENV{'COLORGCC_GCC'} if defined $ENV{'COLORGCC_GCC'};
+    $compilerPaths{"g++"} = $ENV{'COLORGCC_GCXX'} if defined $ENV{'COLORGCC_GCXX'};
+    $compilerPaths{"cc"} = $ENV{'COLORGCC_CC'} if defined $ENV{'COLORGCC_CC'};
+    $compilerPaths{"c++"} = $ENV{'COLORGCC_CXX'} if defined $ENV{'COLORGCC_CXX'};
+}
+
 sub srcscan
 {
   # Usage: srcscan($text, $normalColor)
@@ -203,6 +211,8 @@ if (-f $configFile)
 {
   loadPreferences($configFile);
 }
+
+loadEnvPreferences();
 
 # Figure out which compiler to invoke based on our program name.
 $0 =~ m%.*/(.*)$%;
