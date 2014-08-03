@@ -107,7 +107,6 @@
 
 use strict;
 use warnings;
-use Term::ANSIColor;
 
 use List::Util 'first';
 use IPC::Open3;
@@ -115,11 +114,14 @@ use File::Basename;
 use File::Spec;
 use Cwd 'abs_path';
 
-my(%nocolor, %colors, %compilerPaths);
+use Term::ANSIColor;
+
+my(%nocolor, %colors, %compilerPaths, %options);
 my($unfinishedQuote, $previousColor);
 
 sub initDefaults
 {
+  $options{"chainedPath"} = "0";
   $nocolor{"dumb"} = "true";
 
   $colors{"srcColor"}             = color("bold white");
@@ -170,6 +172,10 @@ sub loadPreferences
     elsif (defined $colors{$option})
     {
       $colors{$option} = color($value);
+    }
+    elsif (defined $options{$option})
+    {
+      $options{$option} = $value;
     }
     else
     {
@@ -275,12 +281,25 @@ sub findPath
   my @path = File::Spec->path();
 
   #join paths with program name and get absolute path
-  @path = map { abs_path( File::Spec->join( $_, $program ) ) } @path;
+  @path = unique map { abs_path( File::Spec->join( $_, $program ) ) } @path;
+  my $progPath = abs_path( $0 );
 
-  # Find first file spec in paths, that
-  # is not current program's file spec;
-  # is executable
-  first { $_ ne abs_path( $0 ) and canExecute( $_ ) } @path;
+  if ($options{chainedPath})
+  {
+    my $lastPath;
+    foreach (reverse @path)
+    {
+      return $lastPath if $_ eq $progPath;
+      $lastPath = $_ if -x;
+    }
+  }
+  else
+  {
+    # Find first file spec in paths, that
+    # is not current program's file spec;
+    # is executable
+    return first { $_ ne $progPath and canExecute( $_ ) } @path;
+  }
 }
 
 my $progName = fileparse $0;
