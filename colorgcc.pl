@@ -121,7 +121,6 @@ my($unfinishedQuote, $previousColor);
 sub initDefaults
 {
   $nocolor{"dumb"} = "true";
-  $compilerPaths{"gcc"} = "/usr/bin/gcc";
 
   $colors{"srcColor"}             = color("bold white");
   $colors{"identColor"}           = color("bold green"); 
