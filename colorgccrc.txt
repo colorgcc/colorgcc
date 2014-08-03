@@ -32,6 +32,12 @@ color-gcc: /usr/bin/gcc
 color-c++: /usr/bin/c++
 color-cc:  /usr/bin/cc
 
+# Uncomment this if you want set up default path to gcc
+#g++: /usr/bin/g++
+#gcc: /usr/bin/gcc
+#c++: /usr/bin/c++
+#cc:  /usr/bin/cc
+
 # Don't do color if our terminal type ($TERM) is one of these.
 # (List all terminal types on one line, seperated by whitespace.)
 nocolor: dumb
