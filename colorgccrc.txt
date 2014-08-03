@@ -20,6 +20,10 @@
 # For example, srcColor: bold cyan on_yellow
 #
 
+# If you are using colorgcc in chain with other tools
+# e.g. ccache, uncomment this:
+chainedPath: 1
+
 # Only define the paths to the actual location of the various compilers 
 # if you need to do something weird.  For normal installs, 
 # we'll figure out who to call next automatically based on $PATH. 
