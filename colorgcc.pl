@@ -3,7 +3,7 @@
 #
 # colorgcc
 #
-# Version: 1.4.2
+# Version: 1.4.3
 #
 #
 # A wrapper to colorize the output from compilers whose messages
@@ -74,8 +74,14 @@
 #    <rik@kde.org> (Rik Hemsley)
 #       Found STDIN bug.
 #
+###################################################################################
+#
 # Changes:
 #
+# 1.4.3  FooBarrior added chainedPath option for using colorgcc in chain with other tools (e.g. ccache)
+#        He also cleaned up path lookup and other minor stuff
+#        His contribution solves Archlinux bug #41423
+
 # 1.4.2 Added detection for GCC_COLORS environment variable (gcc 4.9 -fdiagnostics-color)
 #
 # 1.4.1 Merged with gentoo-patches from fesselk
