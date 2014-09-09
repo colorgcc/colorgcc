@@ -107,19 +107,22 @@
 
 use strict;
 use warnings;
-use Term::ANSIColor;
+
+use List::Util 'first';
 use IPC::Open3;
 use File::Basename;
 use File::Spec;
 use Cwd 'abs_path';
 
-my(%nocolor, %colors, %compilerPaths);
+use Term::ANSIColor;
+
+my(%nocolor, %colors, %compilerPaths, %options);
 my($unfinishedQuote, $previousColor);
 
 sub initDefaults
 {
+  $options{"chainedPath"} = "0";
   $nocolor{"dumb"} = "true";
-  $compilerPaths{"gcc"} = "/usr/bin/gcc";
 
   $colors{"srcColor"}             = color("bold white");
   $colors{"identColor"}           = color("bold green"); 
@@ -169,6 +172,10 @@ sub loadPreferences
     elsif (defined $colors{$option})
     {
       $colors{$option} = color($value);
+    }
+    elsif (defined $options{$option})
+    {
+      $options{$option} = $value;
     }
     else
     {
@@ -254,45 +261,48 @@ elsif (-f '/etc/colorgcc/colorgccrc')
 # is an error.
 $previousColor = $colors{"errorMessageColor"};
 
-# Figure out which compiler to invoke based on our program name.
-$0 =~ m%.*/(.*)$%;
-my $progDir  = abs_path( dirname( $0 ) );
-my $progName = $1 || "gcc";
-my $compiler_pid;
+sub unique{
+  my %seen = ();
+  grep { ! $seen{ $_ }++ } @_;
+}
+
+sub canExecute{
+  warn "$_ is found but is not executable; skipping." if -e !-x;
+  -x
+}
 
 #inspired from Thierry's snippet (Tve, 4-Jul-2002)
 #http://www.tek-tips.com/viewthread.cfm?qid=305851
 sub findPath
 {
-   my $program = shift;
+  my $program = shift;
 
-   # Load the path
-   my @path = File::Spec->path();
+  # Load the path
+  my @path = File::Spec->path();
 
-   # Loop and find if the file is in one of the paths
-   foreach (@path) {
-     # use realpath absolute path to be sure of the directory we keep
-     my $dir = abs_path( $_ );
+  #join paths with program name and get absolute path
+  @path = unique map { abs_path( File::Spec->join( $_, $program ) ) } @path;
+  my $progPath = abs_path( $0 );
 
-     # do not process the directory of the current running script
-     next if ($dir eq $progDir);
-
-     # Concatenate the file
-     my $file = $dir . '/' . $program;
-
-     # continue untill file is found
-     next if (! -e $file);
-     next if (! -f $file);
-
-     $file = abs_path( $file );
-     $dir  = dirname ( $file );
-
-     # check again if not the directory of the current running script
-     next if ($dir eq $progDir);
-
-     return $file
-   }
+  if ($options{chainedPath})
+  {
+    my $lastPath;
+    foreach (reverse @path)
+    {
+      return $lastPath if $_ eq $progPath;
+      $lastPath = $_ if -x;
+    }
+  }
+  else
+  {
+    # Find first file spec in paths, that
+    # is not current program's file spec;
+    # is executable
+    return first { $_ ne $progPath and canExecute( $_ ) } @path;
+  }
 }
+
+my $progName = fileparse $0;
 
 # See if the user asked for a specific compiler.
 my $compiler = 
@@ -313,7 +323,7 @@ if (! -t STDOUT || $nocolor{$terminal} || defined $ENV{"GCC_COLORS"})
 
 # Keep the pid of the compiler process so we can get its return
 # code and use that as our return code.
-$compiler_pid = open3('<&STDIN', \*GCCOUT, \*GCCOUT, $compiler, @ARGV);
+my $compiler_pid = open3('<&STDIN', \*GCCOUT, \*GCCOUT, $compiler, @ARGV);
 
 # Colorize the output from the compiler.
 while(<GCCOUT>)
