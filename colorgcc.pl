@@ -287,7 +287,7 @@ sub findPath
   my @path = File::Spec->path();
 
   #join paths with program name and get absolute path
-  @path = unique map { abs_path( File::Spec->join( $_, $program ) ) } @path;
+  @path = unique map { grep defined($_), abs_path( File::Spec->join( $_, $program ) ) } @path;
   my $progPath = abs_path( $0 );
 
   if ($options{chainedPath})
