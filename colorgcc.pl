@@ -1,115 +1,29 @@
 #!/usr/bin/perl -w
 
+##############################################################################
 #
-# colorgcc
+#  Copyright (c) 1999-2008 Jamie Moyers <jmoyers@geeks.com>
+#                2009-2012 Johannes Schlüter <http://schlueters.de/>
+#                2013-2015 olibre <olibre@Lmap.org>
+#                          and many other contributors (see file CREDIT.md)
 #
-# Version: 1.4.3
+#  This file is the software "colorgcc", a Perl script to colorize gcc output
 #
+#  "colorgcc" is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 2 of the License, or
+#  (at your option) any later version.
 #
-# A wrapper to colorize the output from compilers whose messages
-# match the "gcc" format.
+#  "colorgcc" is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
 #
-# Requires the ANSIColor module from CPAN.
+#  You should have received a copy of the GNU General Public License
+#  along with "colorgcc" (see file LICENSE).  
+#  If not, see <http://www.gnu.org/licenses/>.
 #
-# Usage:
-#
-# Option 1)
-# In a directory that occurs in your PATH _before_ the directory
-# where the compiler lives, create a softlink to colorgcc for
-# each compiler you want to colorize:
-#
-#    g++ -> colorgcc
-#    gcc -> colorgcc
-#    cc  -> colorgcc
-#    etc.
-#
-# That's it. When "g++" is invoked, colorgcc is run instead.
-# colorgcc looks at the program name to figure out which compiler to run.
-#
-# Option 2)
-# In a directory in your PATH, create the following links to colorgcc:
-#    color-g++ -> colorgcc
-#    color-c++ -> colorgcc
-#    color-gcc -> colorgcc
-#    color-cc  -> colorgcc
-# Then override the compiler macros for make, for example:
-#    make CXX=color-g++ CC=color-gcc
-#
-# The default settings can be overridden with ~/.colorgccrc.
-# See the comments in the sample .colorgccrc for more information.
-#
-# Note:
-#
-# colorgcc will only emit color codes if:
-#
-#    (1) Its STDOUT is a tty and
-#    (2) the value of $TERM is not listed in the "nocolor" option.
-#
-# If colorgcc colorizes the output, the compiler's STDERR will be
-# combined with STDOUT. Otherwise, colorgcc just passes the output from
-# the compiler through without modification.
-#
-# Author: Jamie Moyers <jmoyers@geeks.com>
-# Started: April 20, 1999
-# Licence: GNU Public License
-#
-# Credits:
-#
-#    I got the idea for this from a script called "color_cvs":
-#       color_cvs .03   Adrian Likins <adrian@gimp.org> <adrian@redhat.com>
-#
-#    <seh4@ix.netcom.com> (Scott Harrington)
-#       Much improved handling of compiler command line arguments.
-#       exec compiler when not colorizing to preserve STDOUT, STDERR.
-#       Fixed my STDIN kludge.
-#
-#    <ecarotti@athena.polito.it> (Elias S. G. Carotti)
-#       Corrected handling of text like -DPACKAGE=\"Package\"
-#       Spotted return code bug.
-#
-#    <erwin@erwin.andreasen.org> (Erwin S. Andreasen)
-#    <schurchi@ucsd.edu> (Steve Churchill)
-#       Return code bug fixes.
-#
-#    <rik@kde.org> (Rik Hemsley)
-#       Found STDIN bug.
-#
-###################################################################################
-#
-# Changes:
-#
-# 1.4.3  FooBarrior added chainedPath option for using colorgcc in chain with other tools (e.g. ccache)
-#        He also cleaned up path lookup and other minor stuff
-#        His contribution solves Archlinux bug #41423
-
-# 1.4.2 Added detection for GCC_COLORS environment variable (gcc 4.9 -fdiagnostics-color)
-#
-# 1.4.1 Merged with gentoo-patches from fesselk
-#       https://github.com/fesselk/colorgcc/commit/5f458441c225a4c5e69ea7b9097e31aabc4cc816
-#
-# 1.4.0 Search compiler within $PATH -> added function findPath()
-#       More highlighting lines: "instanciated from", "note:" and linker error 
-#
-# 1.3.2 Better handling of command line arguments to compiler.
-#
-#       If we aren't colorizing output, we just exec the compiler which
-#       preserves the original STDOUT and STDERR.
-#
-#       Removed STDIN kludge. STDIN being passed correctly now.
-#
-# 1.3.1 Added kludge to copy STDIN to the compiler's STDIN.
-#
-# 1.3.0 Now correctly returns (I hope) the return code of the compiler
-#       process as its own.
-#
-# 1.2.1 Applied patch to handle text similar to -DPACKAGE=\"Package\".
-#
-# 1.2.0 Added tty check. If STDOUT is not a tty, don't do color.
-#
-# 1.1.0 Added the "nocolor" option to turn off the color if the terminal type
-#       ($TERM) is listed.
-#
-# 1.0.0 Initial Version
+##############################################################################
 
 use strict;
 use warnings;
