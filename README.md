@@ -93,3 +93,10 @@ example).
 
 It's easy to get around this by giving an explicit `--prefix=/usr/local`
 when you configure a package, but it's a minor annoyance.
+
+## Other interresting versions
+
+- http://old-releases.ubuntu.com/ubuntu/pool/universe/c/colorgcc/
+- https://sources.gentoo.org/cgi-bin/viewvc.cgi/gentoo-x86/dev-util/colorgcc/?hideattic=0
+- https://github.com/dgoncharov/colorgcc
+- https://github.com/gagern/colorgcc/commit/4a378fd26d29f25c08f232cf1e73b7697f3a4352
