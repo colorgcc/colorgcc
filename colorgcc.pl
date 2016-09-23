@@ -10,8 +10,6 @@
 # A wrapper to colorize the output from compilers whose messages
 # match the "gcc" format.
 #
-# Requires the ANSIColor module from CPAN.
-#
 # Usage:
 #
 # Option 1)
