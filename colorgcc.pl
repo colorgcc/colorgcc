@@ -3,7 +3,7 @@
 #
 # colorgcc
 #
-# Version: 1.4.3
+# Version: 1.4.5
 #
 #
 # A wrapper to colorize the output from compilers whose messages
@@ -53,32 +53,28 @@
 # Started: April 20, 1999
 # Licence: GNU Public License
 #
-# Credits:
+# Credits (alphabetically):
 #
-#    I got the idea for this from a script called "color_cvs":
-#       color_cvs .03   Adrian Likins <adrian@gimp.org> <adrian@redhat.com>
+#    Adam Nielsen <malvineous@shikadi.net>
+#    Adrian Likins <adrian@gimp.org> <adrian@redhat.com>
+#    Elias S. G. Carotti <ecarotti@athena.polito.it>
+#    James E. Flemer <jflemer@alum.rpi.edu>
+#    Johannes Schlüter <johannes@schlueters.de>
+#    Juan Batiz-Benet <jbenet@cs.stanford.edu>
+#    Rik Hemsley <rik@kde.org>
+#    Scott Harrington <seh4@ix.netcom.com>
+#    Steve Churchill <schurchi@ucsd.edu>
+#    Steven Honeyman <stevenhoneyman@users.noreply.github.com>
+#    Zuyi Hu <hzy068808@gmail.com>
+#    foobarrior <nikitamalyavin@gmail.com>
+#    olibre <olibre@Lmap.org>
 #
-#    <seh4@ix.netcom.com> (Scott Harrington)
-#       Much improved handling of compiler command line arguments.
-#       exec compiler when not colorizing to preserve STDOUT, STDERR.
-#       Fixed my STDIN kludge.
-#
-#    <ecarotti@athena.polito.it> (Elias S. G. Carotti)
-#       Corrected handling of text like -DPACKAGE=\"Package\"
-#       Spotted return code bug.
-#
-#    <erwin@erwin.andreasen.org> (Erwin S. Andreasen)
-#    <schurchi@ucsd.edu> (Steve Churchill)
-#       Return code bug fixes.
-#
-#    <rik@kde.org> (Rik Hemsley)
-#       Found STDIN bug.
 #
 ###################################################################################
 #
 # Changes:
 #
-# 1.4.3  FooBarrior added chainedPath option for using colorgcc in chain with other tools (e.g. ccache)
+# 1.4.5  FooBarrior added chainedPath option for using colorgcc in chain with other tools (e.g. ccache)
 #        He also cleaned up path lookup and other minor stuff
 #        His contribution solves Archlinux bug #41423
 

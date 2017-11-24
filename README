@@ -1,6 +1,6 @@
 colorgcc
 
-Version: 1.4.3
+Version: 1.4.5
 
 A wrapper to colorize the output from compilers whose messages
 match the "gcc" format.
