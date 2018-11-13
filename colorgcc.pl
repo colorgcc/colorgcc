@@ -317,7 +317,10 @@ my $terminal = $ENV{"TERM"} || "dumb";
 # If it's in the list of terminal types not to color, or if
 # GCC (in version 4.9+) is set to do its own coloring, or if
 # we're writing to something that's not a tty, don't do color.
-if (! -t STDOUT || $nocolor{$terminal} || defined $ENV{"GCC_COLORS"})
+# Setting COLORGCC_FORCE overwrites the heuristic, which helps,
+# for instance, to get colored output from ninja.
+if ((! defined $ENV{"COLORGCC_ENFORCE"}) &&
+    (! -t STDOUT || $nocolor{$terminal} || defined $ENV{"GCC_COLORS"}))
 {
   exec $compiler, @ARGV
   or die("Couldn't exec");
